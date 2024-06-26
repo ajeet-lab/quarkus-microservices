@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes xmlns="http://camel.apache.org/schema/spring"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd"
+    id="Quarkus_CamelXML">
+
+    <route id="hello">
+        <from uri="timer:hello?period={{timer.period}}"/> <!-- use camel {{ }} property placeholder syntax -->
+        <transform>
+          <!-- call the method on the bean -->
+          <method ref="myBean" method="saySomething"/>
+        </transform>
+        <filter>
+          <simple>${body} contains 'foo'</simple>
+          <to uri="log:foo"/>
+        </filter>
+        <to uri="stream:out"/>
+      </route>
+
+</routes>
