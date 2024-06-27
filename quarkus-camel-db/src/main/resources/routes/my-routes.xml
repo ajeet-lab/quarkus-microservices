@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns="http://camel.apache.org/schema/spring"
+    xsi:schemaLocation="http://camel.apache.org/schema/spring https://camel.apache.org/schema/spring/camel-spring.xsd">
+
+
+
+    <route id="fetchAllData">
+        <from uri="rest:get:api/v1/getAllData" />
+        <setBody>
+            <simple>{{sql.getAllData}}</simple>
+        </setBody>
+        <!-- We can use sql component instead of jdbc-->
+        <!-- <to uri="sql:{{sql.getAllData}}" /> -->
+        <to uri="jdbc:datasource" />
+        <log id="fetchAllData_001" message="body :: ${body}" />
+        <marshal>
+            <json library="Jackson" />
+        </marshal>
+    </route>
+
+    <route id="insertData">
+        <from uri="rest:post:create" />
+
+        <doTry>
+            <unmarshal>
+                <json library="Jackson" />
+            </unmarshal>
+            <setHeader name="name">
+                <simple>${body[name]}</simple>
+            </setHeader>
+            <setHeader name="position">
+                <simple>${body[position]}</simple>
+            </setHeader>
+            <setHeader name="salary">
+                <simple>${body[salary]}</simple>
+            </setHeader>
+            <setBody>
+                <simple>{{sql.insertData}}</simple>
+            </setBody>
+            <log id="insertData_001" message="body :: ${body}" />
+
+            <!-- We can use sql component instead of jdbc-->
+            <toD uri="sql:${body}" />
+            <log id="insertData_001" message="body :: ${header.CamelSqlUpdateCount}" />
+
+            <!-- We can use jdbc component instead of sql-->
+            <!-- <to uri="jdbc:datasource" /> -->
+            <!-- <log id="insertData_002" message="body :: ${header.CamelJdbcUpdateCount}" /> -->
+
+            <choice>
+                <when>
+                    <simple>${header.CamelSqlUpdateCount} == '1'</simple>
+                    <setBody>
+                        <simple>{"statusCode":201,"status":"success","message":"Data inserted in successfully !!"}</simple>
+                    </setBody>
+                </when>
+            </choice>
+
+            <doCatch>
+                <exception>java.lang.Exception</exception>
+                <log message="inside the exception block" />
+                <setProperty name="ExpMsg"><simple>${exception.message}</simple></setProperty>
+                <bean ref="utils" method="internalServerError" />
+                <marshal><json library="Jackson"/></marshal>  
+            </doCatch>
+        </doTry>
+    </route>
+
+
+    <route id="getDataById">
+        <from uri="rest:get:getDataById/{id}" />
+        <doTry>
+            <log message="id ::: ======> ${header.id}" />
+            <setBody>
+                <simple>{{sql.getDataById}}</simple>
+            </setBody>
+            <log id="getDataById_001" message="Before calling database, body :: ${body}" />
+
+            <!-- We can use sql component instead of jdbc-->
+            <toD uri="sql:${body}?outputType=SelectOne" />
+            <log id="getDataById_002" message="After calling database, body :: ${body}" />
+
+
+            <!-- We can use jdbc component instead of sql-->
+            <!-- <to uri="jdbc:datasource" /> 
+            <log id="getDataById_002" message="After calling database, body :: ${body}" /> -->
+
+            <choice>
+                <when>
+                    <simple>${body} == null</simple>                   
+                    <bean ref="utils" method="contentNotFoundMessage" />                 
+                </when>
+            </choice>
+            <marshal>
+                <json library="Jackson" />
+            </marshal>
+
+
+            <doCatch>
+                <exception>java.lang.Exception</exception>
+                <log message="inside the exception block" />
+                <setProperty name="ExpMsg"><simple>${exception.message}</simple></setProperty>
+                <bean ref="utils" method="internalServerError" />
+                <marshal><json library="Jackson"/></marshal>  
+            </doCatch>
+        </doTry>
+    </route>
+
+
+    <route id="updateDataById">
+        <from uri="rest:put:updateDataById/{id}" />
+        <doTry>
+            
+            <log message="id ::: ======> ${header.id} and headers =====> ${headers}" />
+            <unmarshal><json library="Jackson"/></unmarshal>
+            <setHeader name="name"><simple>${body[name]}</simple></setHeader>
+            <setBody>
+                <simple>{{sql.updateDataById}}</simple>
+            </setBody>
+            <log id="updateDataById_001" message="Before calling database, body :: ${body}" />
+
+            <!-- We can use sql component instead of jdbc-->
+            <toD uri="sql:${body}" />
+            <log id="updateDataById_002"
+                message="After calling database, CamelSqlUpdateCount :: ${header.CamelSqlUpdateCount} and body:: ${body}" />
+
+            <!-- We can use jdbc component instead of sql-->
+            <!-- <to uri="jdbc:datasource" /> 
+            <log id="updateDataById_002" message="After calling database, CamelJdbcUpdateCount :: ${header.CamelJdbcUpdateCount}" /> -->
+
+            <choice>
+                <when>
+                    <simple>${header.CamelSqlUpdateCount} == '1'</simple>
+                    <setHeader name="Content-Type">
+                        <simple>application/json</simple>
+                    </setHeader>
+                    <toD uri="sql:{{sql.getDataById}}?outputType=SelectOne" />
+                    <marshal><json library="Jackson"/></marshal>
+                </when>
+                <otherwise>
+                    <bean ref="utils" method="contentNotFoundMessage" />
+                </otherwise>
+            </choice>
+
+
+            <doCatch>
+                <exception>java.lang.Exception</exception>
+                <log message="inside the exception block" />
+                <setProperty name="ExpMsg"><simple>${exception.message}</simple></setProperty>
+                <bean ref="utils" method="internalServerError" />
+                <marshal><json library="Jackson"/></marshal>                
+            </doCatch>
+        </doTry>
+    </route>
+
+
+    <route id="deleteDataById">
+        <from uri="rest:delete:deleteDataById/{id}" />
+        <doTry>
+            <log message="id ::: ======> ${header.id} and headers =====> ${headers}" />
+            <setBody>
+                <simple>{{sql.deleteDataById}}</simple>
+            </setBody>
+            <log id="deleteDataById_001" message="Before calling database, body :: ${body}" />
+
+            <!-- We can use sql component instead of jdbc-->
+            <toD uri="sql:${body}" />
+            <log id="deleteDataById_002"
+                message="After calling database, CamelSqlUpdateCount :: ${header.CamelSqlUpdateCount}" />
+
+            <!-- We can use jdbc component instead of sql-->
+            <!-- <to uri="jdbc:datasource" /> 
+            <log id="deleteDataById_002" message="After calling database, CamelJdbcUpdateCount :: ${header.CamelJdbcUpdateCount}" /> -->
+
+            <choice>
+                <when>
+                    <simple>${header.CamelSqlUpdateCount} == '1'</simple>
+                    <setHeader name="Content-Type">
+                        <simple>application/json</simple>
+                    </setHeader>
+                    <setBody>
+                        <simple>{"statusCode":200,"status":"success","message":"Data deleted successfully !!"}</simple>
+                    </setBody>
+                </when>
+                <otherwise>
+                    <bean ref="utils" method="contentNotFoundMessage" />
+                </otherwise>
+            </choice>
+
+
+            <doCatch>
+                <exception>java.lang.Exception</exception>
+                <log message="inside the exception block" />
+                <setProperty name="ExpMsg"><simple>${exception.message}</simple></setProperty>
+                <bean ref="utils" method="internalServerError" />
+                <marshal><json library="Jackson"/></marshal>  
+            </doCatch>
+        </doTry>
+    </route>
+</routes>
