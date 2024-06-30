@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns="http://camel.apache.org/schema/spring"
+      xsi:schemaLocation="http://camel.apache.org/schema/spring https://camel.apache.org/schema/spring/camel-spring.xsd" >
+
+   
+ 
+
+  <route>
+      <from uri="timer:foo?period=15s" />
+      <setBody><simple>{"message":"${date:now}"}</simple></setBody>
+      <to uri="activemq:queue:test-queue" />
+      <log message="Message pushed into test-queue successfully !!" />
+  </route>
+
+  </routes>
